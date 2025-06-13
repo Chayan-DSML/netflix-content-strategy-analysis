@@ -1,1 +1,2 @@
 # netflix-content-strategy-analysis
+Dive into a data-driven exploration of Netflix's global content library! This project uncovers fascinating insights into their content distribution, genre popularity, and strategic growth trends. Understand the data behind Netflix's dominance and explore actionable recommendations for optimizing content investment. 👉 https://ott-content-strategy-datainsights-rep.netlify.app/
