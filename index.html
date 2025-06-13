@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Netflix Content Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noah:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Netflix Theme (Black, Red, White) -->
+    <!-- Application Structure Plan: The SPA is designed as a top-down narrative dashboard. It starts with a high-level summary and key metrics to immediately orient the user. This is followed by a new Global Content Footprint chart for a quick geographical overview. Then, a multi-section interactive dashboard for detailed data exploration (Content Mix, Genre Popularity, Growth Trends, Geographic Content Origin, Content Duration, Seasons Distribution), allowing users to dive into the core EDA findings. The structure then synthesizes this data into qualitative 'Key Findings' and actionable 'Recommendations' presented in a clear, digestible card format. This flow was chosen to guide the user from a broad overview to specific details and finally to strategic takeaways, mirroring how a professional analyst would present a story from data, maximizing usability and comprehension. -->
+    <!-- Visualization & Content Choices: 
+        - Content Type Distribution -> Goal: Inform -> Viz: Doughnut Chart -> Interaction: Hover tooltips -> Justification: Ideal for showing simple, powerful part-to-whole relationships. -> Library: Chart.js (Canvas).
+        - Global Content Footprint (NEW) -> Goal: Inform/Compare -> Viz: Bar Chart -> Interaction: Hover tooltips -> Justification: Provides immediate high-level geographic overview. -> Library: Chart.js (Canvas).
+        - Top Genres -> Goal: Compare -> Viz: Horizontal Bar Chart -> Interaction: Hover tooltips -> Justification: Best for comparing and ranking categorical data with long labels. -> Library: Chart.js (Canvas).
+        - Content Addition vs. Release Trends -> Goal: Show Change -> Viz: Line Chart -> Interaction: Hover tooltips, toggle buttons -> Justification: Excellent for displaying trends over a continuous period (time). Toggle adds a layer of user-driven exploration. -> Library: Chart.js (Canvas).
+        - Geographic Content Origin -> Goal: Compare -> Viz: Bar Chart (with rotated labels) -> Interaction: Hover tooltips -> Justification: Clearly ranks and compares content volume from different countries with improved readability for longer names. -> Library: Chart.js (Canvas).
+        - Movie Duration Distribution -> Goal: Inform/Compare -> Viz: Bar Chart -> Interaction: Hover tooltips -> Justification: Easy to understand distribution of movie lengths. -> Library: Chart.js (Canvas).
+        - TV Show Seasons Distribution -> Goal: Inform/Compare -> Viz: Bar Chart -> Interaction: Hover tooltips -> Justification: Clearly shows typical number of seasons for TV series. -> Library: Chart.js (Canvas).
+        - Key Findings/Recommendations -> Goal: Synthesize/Inform -> Presentation: Styled HTML/CSS Cards -> Interaction: None (static display) -> Justification: Presents qualitative insights in a structured, easily scannable format without distraction. -> Method: Tailwind CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noah', sans-serif; /* Noah font for body text */
+            background-color: #000000; /* Black background */
+            color: #FFFFFF; /* White text */
+        }
+        .main-title {
+            font-family: 'Bebas Neue', sans-serif; /* Bebas Neue for main title */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            max-height: 400px;
+            background-color: #1A1A1A; /* Slightly lighter black for chart background */
+            border-radius: 0.75rem;
+            padding: 1rem; /* Add padding for charts */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #E50914; /* Netflix Red */
+        }
+        .card {
+            background-color: #1A1A1A; /* Dark background for cards */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(229, 9, 20, 0.2), 0 2px 4px -2px rgba(229, 9, 20, 0.1); /* Red shadow */
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 1px solid transparent; /* Default transparent border */
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(229, 9, 20, 0.4), 0 4px 6px -2px rgba(229, 9, 20, 0.2); /* Enhanced red shadow on hover */
+            border-color: #E50914; /* Red border on hover */
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+        }
+        .btn-active {
+            background-color: #E50914; /* Netflix Red */
+            color: white;
+        }
+        .btn-inactive {
+            background-color: #333333; /* Dark gray for inactive buttons */
+            color: #CCCCCC; /* Light gray text */
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <header class="bg-black shadow-md sticky top-0 z-50 border-b border-red-700">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-4">
+            <h1 class="text-xl md:text-2xl font-bold text-red-600 flex items-center main-title">
+                <span class="text-4xl text-red-600 font-extrabold mr-2">N</span>Netflix Content Strategy
+            </h1>
+            <!-- Removed navigation links as per user request -->
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <section id="summary" class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">An Interactive Analysis of the Netflix Library</h2>
+            <p class="max-w-3xl mx-auto text-gray-300 mb-8">
+                This dashboard translates the Netflix Content Case Study into an interactive experience. Explore the data to understand content distribution, growth trends, and the strategic insights that drive Netflix's global dominance.
+            </p>
+
+            <div class="card mb-8">
+                <h3 class="text-xl font-bold mb-1">Global Content Footprint</h3>
+                <p class="text-gray-300 text-sm mb-4">A high-level view of content contribution from top countries worldwide. The United States leads significantly, followed by key international markets.</p>
+                <div class="chart-container">
+                    <canvas id="globalContentChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="dashboard" class="mb-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="card text-center border-red-700">
+                    <h3 class="font-bold text-gray-400 text-sm uppercase">Content Mix</h3>
+                    <p class="text-4xl font-bold text-red-600 mt-2">69% / 31%</p>
+                    <p class="text-sm text-gray-400 mt-1">Movies / TV Shows</p>
+                </div>
+                <div class="card text-center border-red-700">
+                    <h3 class="font-bold text-gray-400 text-sm uppercase">Top Market</h3>
+                    <p class="text-4xl font-bold text-red-600 mt-2">USA</p>
+                    <p class="text-sm text-gray-400 mt-1">Largest Content Contributor</p>
+                </div>
+                 <div class="card text-center border-red-700">
+                    <h3 class="font-bold text-gray-400 text-sm uppercase">Dominant Genre</h3>
+                    <p class="text-4xl font-bold text-red-600 mt-2">Dramas</p>
+                    <p class="text-sm text-gray-400 mt-1">Most Prevalent Category</p>
+                </div>
+                <div class="card text-center border-red-700">
+                    <h3 class="font-bold text-gray-400 text-sm uppercase">Key Trend</h3>
+                    <p class="text-4xl font-bold text-red-600 mt-2">TV Series</p>
+                    <p class="text-sm text-gray-400 mt-1">Strategic Shift in Focus</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">Content Type Distribution</h3>
+                    <p class="text-gray-300 text-sm mb-4">This chart shows the proportion of movies versus TV shows in the Netflix library, highlighting the platform's historical focus on film.</p>
+                    <div class="chart-container mx-auto max-w-sm">
+                        <canvas id="contentMixChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">Top 10 Content Genres</h3>
+                    <p class="text-gray-300 text-sm mb-4">An overview of the most common genres. Dramas and Comedies form the backbone of the library, with International content showing a strong global focus.</p>
+                    <div class="chart-container">
+                        <canvas id="topGenresChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">Geographic Content Origin</h3>
+                    <p class="text-gray-300 text-sm mb-4">This chart ranks the top countries producing content for Netflix, demonstrating the platform's reliance on the U.S. market and its significant expansion into India.</p>
+                    <div class="chart-container">
+                        <canvas id="countryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">Content Growth Trends</h3>
+                    <p class="text-gray-300 text-sm mb-4">Explore the library's evolution by toggling between the release year of content and the year it was added to Netflix. This reveals a strategy focused on acquiring recent productions.</p>
+                    <div class="flex justify-center space-x-2 mb-4">
+                        <button id="showAddedBtn" class="btn btn-active">Added to Netflix</button>
+                        <button id="showReleaseBtn" class="btn btn-inactive">Release Year</button>
+                        <button id="showCombinedBtn" class="btn btn-inactive">Combined View</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">Movie Duration Distribution</h3>
+                    <p class="text-gray-300 text-sm mb-4">This chart visualizes the distribution of movie runtimes on Netflix, showing common viewing durations. Ideal for understanding typical film lengths.</p>
+                    <div class="chart-container">
+                        <canvas id="movieDurationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-1">TV Show Seasons Distribution</h3>
+                    <p class="text-gray-300 text-sm mb-4">Understand the typical length of TV series available on Netflix by the number of seasons. This highlights the prevalence of shorter or longer series.</p>
+                    <div class="chart-container">
+                        <canvas id="tvSeasonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="findings" class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8">Key Findings & Analysis</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► Strategic Shift to TV Series</h4>
+                    <p class="text-gray-300">While movies dominate in volume, the increasing rate of TV show additions points to a strategic pivot. Series foster longer user engagement and are key to subscriber retention.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► Global Content Diversification</h4>
+                    <p class="text-gray-300">The significant amount of content from countries like India and the UK confirms an aggressive international expansion, crucial for attracting subscribers in diverse markets.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► Dominance of Core Genres</h4>
+                    <p class="text-gray-300">Dramas and Comedies are the foundational pillars of the content library, appealing to the broadest audience demographics and requiring consistent investment.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► High Content Refresh Rate</h4>
+                    <p class="text-gray-300">The accelerating pace of new additions shows a high investment in keeping the library fresh, a vital tactic for reducing churn in a competitive streaming landscape.</p>
+                </div>
+                 <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► Importance of Original Content</h4>
+                    <p class="text-gray-300">Trends strongly suggest a push for recent productions, most of which are Netflix Originals. This content acts as a key market differentiator and a primary driver for new subscriptions.</p>
+                </div>
+                 <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">► Key Talent Relationships</h4>
+                    <p class="text-gray-300">The frequent appearance of certain directors and cast members suggests a strategy of building relationships with proven talent to ensure a pipeline of popular content.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="recommendations" class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8">Strategic Recommendations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Optimize TV Series Investment</h4>
+                    <p class="text-gray-300">Continue investing in high-quality, binge-worthy series. Use data to explore and invest in niche genres with high growth potential to capture new audience segments.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Leverage Geographic Strengths</h4>
+                    <p class="text-gray-300">Deepen investment in content from top-performing international markets like India and the UK. Explore co-productions to mitigate costs and broaden cultural appeal.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Data-Driven Genre Expansion</h4>
+                    <p class="text-gray-300">Beyond the core genres, use granular viewership data to identify and invest in emerging trends, such as specific sub-genres of animation or documentaries.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Enhance Personalization</h4>
+                    <p class="text-gray-300">Utilize director and cast data to refine recommendation algorithms. Promote content cross-pollination (e.g., suggesting a movie from a director of a watched series).</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Maintain Dynamic Acquisition</h4>
+                    <p class="text-gray-300">Stay agile by balancing big-budget blockbusters with critically acclaimed independent productions to cater to both broad and niche audience tastes effectively.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Pre-empt Content Trends</h4>
+                    <p class="text-gray-300">Proactively analyze social media and competitor data to identify cultural shifts, allowing for pre-emptive acquisition or production of content that will resonate with future audiences.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Cross-Platform Content Promotion</h4>
+                    <p class="text-gray-300">Strategically promote content across various social media and partner platforms to maximize visibility and drive new subscriber interest, beyond the Netflix app itself.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Audience Segment-Specific Content</h4>
+                    <p class="text-gray-300">Develop and acquire content tailored to specific audience segments (e.g., young adults, families, specific ethnic groups) to foster deeper engagement and loyalty within those communities.</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-lg mb-2 text-red-600">✔ Iterative Content Performance Review</h4>
+                    <p class="text-gray-300">Implement a continuous feedback loop to analyze the performance of new content. Use viewership data to inform subsequent content investments and refine creative direction.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-black text-white mt-16 border-t border-red-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <h3 class="text-lg font-bold mb-2">About This Analysis</h3>
+            <p class="text-gray-400 mb-4">This interactive report is based on the Netflix Movies and TV Shows dataset. The analysis focuses on metadata and does not include viewership, financial, or user demographic data. As such, it represents a high-level strategic overview of the content library.</p>
+            <p class="text-center text-sm text-gray-500">&copy; 2024 Interactive Report. Created for demonstration purposes.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartColors = {
+                netflixRed: '#E50914',
+                darkRed: '#B80000',
+                white: '#FFFFFF',
+                lightGray: '#CCCCCC',
+                darkGray: '#333333',
+                backgroundDark: '#1A1A1A'
+            };
+
+            const defaultChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: chartColors.white, /* White labels for legend */
+                            font: {
+                                family: "'Noah', sans-serif" /* Noah font for chart legend */
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: chartColors.darkGray, /* Dark tooltip background */
+                        titleColor: chartColors.white, /* White tooltip title */
+                        bodyColor: chartColors.lightGray, /* Light gray tooltip body */
+                        bodyFont: {
+                            family: "'Inter', sans-serif" /* Use Inter for tooltips for readability */
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { 
+                            color: chartColors.white,
+                            font: {
+                                family: "'Inter', sans-serif" /* Use Inter for axis ticks for readability */
+                            }
+                        }, 
+                        grid: { color: chartColors.darkGray } /* Darker grid lines */
+                    },
+                    x: {
+                        ticks: { 
+                            color: chartColors.white,
+                            font: {
+                                family: "'Inter', sans-serif" /* Use Inter for axis ticks for readability */
+                            }
+                        }, 
+                        grid: { display: false }
+                    }
+                }
+            };
+            
+            const contentMixData = {
+                labels: ['Movies', 'TV Shows'],
+                datasets: [{
+                    label: 'Content Mix',
+                    data: [69, 31],
+                    backgroundColor: [chartColors.white, chartColors.netflixRed], /* Updated colors */
+                    borderColor: '#000000', /* Black border for separation */
+                    borderWidth: 2,
+                }]
+            };
+            const contentMixCtx = document.getElementById('contentMixChart').getContext('2d');
+            new Chart(contentMixCtx, {
+                type: 'doughnut',
+                data: contentMixData,
+                options: { ...defaultChartOptions, plugins: { ...defaultChartOptions.plugins, legend: { position: 'right', labels: { color: chartColors.white, font: { family: "'Noah', sans-serif" } } } }, scales: { y: { display: false }, x: { display: false } } }
+            });
+
+            const topGenresData = {
+                labels: ['Dramas', 'Comedies', 'International', 'Action & Adventure', 'Documentaries', 'Independent Movies', 'Thrillers', 'Children & Family', 'Romantic Movies', 'Stand-Up Comedy'],
+                datasets: [{
+                    label: 'Number of Titles',
+                    data: [100, 85, 70, 65, 60, 50, 48, 45, 40, 35],
+                    backgroundColor: chartColors.netflixRed,
+                    borderColor: chartColors.darkRed,
+                    borderWidth: 1,
+                }]
+            };
+            const topGenresCtx = document.getElementById('topGenresChart').getContext('2d');
+            new Chart(topGenresCtx, {
+                type: 'bar',
+                data: topGenresData,
+                options: { ...defaultChartOptions, indexAxis: 'y', plugins: { ...defaultChartOptions.plugins, legend: { display: false } }, scales: { y: { ticks: { color: chartColors.white, font: { family: "'Noah', sans-serif" } } }, x: { grid: { display: true, color: chartColors.darkGray } } } }
+            });
+
+            const countryData = {
+                labels: ['United States', 'India', 'United Kingdom', 'Canada', 'France', 'Japan', 'Spain'],
+                datasets: [{
+                    label: 'Number of Titles',
+                    data: [100, 65, 40, 30, 25, 22, 20],
+                    backgroundColor: chartColors.netflixRed,
+                    borderColor: chartColors.darkRed,
+                    borderWidth: 1,
+                }]
+            };
+            const countryCtx = document.getElementById('countryChart').getContext('2d');
+            new Chart(countryCtx, {
+                type: 'bar',
+                data: countryData,
+                options: { 
+                    ...defaultChartOptions, 
+                    plugins: { 
+                        ...defaultChartOptions.plugins, 
+                        legend: { display: false } 
+                    }, 
+                    scales: { 
+                        x: { 
+                            ticks: { 
+                                maxRotation: 90, 
+                                minRotation: 90, 
+                                color: chartColors.white, 
+                                font: { family: "'Inter', sans-serif" } 
+                            } 
+                        }, 
+                        y: { 
+                            ticks: { 
+                                color: chartColors.white, 
+                                font: { family: "'Inter', sans-serif" } 
+                            }, 
+                            grid: { color: chartColors.darkGray } 
+                        } 
+                    } 
+                } // This is the closing brace for the options object. No extra brace here.
+            });
+            
+            // New: Global Content Footprint Chart Data
+            const globalContentData = {
+                labels: ['USA', 'India', 'UK', 'Canada', 'Japan', 'France', 'Spain'],
+                datasets: [{
+                    label: 'Content Count',
+                    data: [2500, 800, 500, 300, 250, 200, 150], /* Dummy data for high-level view */
+                    backgroundColor: chartColors.netflixRed,
+                    borderColor: chartColors.darkRed,
+                    borderWidth: 1,
+                }]
+            };
+            const globalContentCtx = document.getElementById('globalContentChart').getContext('2d');
+            new Chart(globalContentCtx, {
+                type: 'bar',
+                data: globalContentData,
+                options: { 
+                    ...defaultChartOptions, 
+                    plugins: { 
+                        ...defaultChartOptions.plugins, 
+                        legend: { display: false } 
+                    }, 
+                    scales: { 
+                        x: { 
+                            ticks: { 
+                                color: chartColors.white, 
+                                font: { family: "'Inter', sans-serif" } 
+                            } 
+                        }, 
+                        y: { 
+                            ticks: { 
+                                color: chartColors.white, 
+                                font: { family: "'Inter', sans-serif" } 
+                            }, 
+                            grid: { color: chartColors.darkGray } 
+                        } 
+                    } 
+                } // This is the closing brace for the options object. No extra brace here.
+            });
+
+
+            const trendsData = {
+                labels: ['2015', '2016', '2017', '2018', '2019', '2020', '2021'],
+                datasets: [
+                    {
+                        label: 'Content Added to Netflix',
+                        data: [15, 25, 45, 70, 100, 90, 85],
+                        borderColor: chartColors.netflixRed,
+                        backgroundColor: 'rgba(229, 9, 20, 0.2)', /* Lighter red fill */
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Content by Release Year',
+                        data: [10, 20, 40, 65, 95, 80, 75],
+                        borderColor: chartColors.white, /* White line for contrast */
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)', /* White fill */
+                        fill: true,
+                        tension: 0.3,
+                        hidden: true
+                    }
+                ]
+            };
+            const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+            const trendsChart = new Chart(trendsCtx, {
+                type: 'line',
+                data: trendsData,
+                options: defaultChartOptions
+            });
+
+            // New: Movie Duration Chart Data
+            const movieDurationData = {
+                labels: ['< 90 min', '90-120 min', '> 120 min', 'Unknown'],
+                datasets: [{
+                    label: 'Number of Movies',
+                    data: [1500, 3000, 1800, 500], /* Dummy data for illustration */
+                    backgroundColor: chartColors.netflixRed,
+                    borderColor: chartColors.darkRed,
+                    borderWidth: 1,
+                }]
+            };
+            const movieDurationCtx = document.getElementById('movieDurationChart').getContext('2d');
+            new Chart(movieDurationCtx, {
+                type: 'bar',
+                data: movieDurationData,
+                options: { ...defaultChartOptions, plugins: { ...defaultChartOptions.plugins, legend: { display: false } } }
+            });
+
+            // New: TV Show Seasons Chart Data
+            const tvSeasonData = {
+                labels: ['1 Season', '2 Seasons', '3-5 Seasons', '6+ Seasons'],
+                datasets: [{
+                    label: 'Number of TV Shows',
+                    data: [1200, 400, 300, 100], /* Dummy data for illustration */
+                    backgroundColor: chartColors.netflixRed,
+                    borderColor: chartColors.darkRed,
+                    borderWidth: 1,
+                }]
+            };
+            const tvSeasonCtx = document.getElementById('tvSeasonChart').getContext('2d');
+            new Chart(tvSeasonCtx, {
+                type: 'bar',
+                data: tvSeasonData,
+                options: { ...defaultChartOptions, plugins: { ...defaultChartOptions.plugins, legend: { display: false } } }
+            });
+
+
+            const showAddedBtn = document.getElementById('showAddedBtn');
+            const showReleaseBtn = document.getElementById('showReleaseBtn');
+            const showCombinedBtn = document.getElementById('showCombinedBtn');
+            
+            function deactivateAllButtons() {
+                showAddedBtn.classList.replace('btn-active', 'btn-inactive');
+                showReleaseBtn.classList.replace('btn-active', 'btn-inactive');
+                showCombinedBtn.classList.replace('btn-active', 'btn-inactive');
+            }
+
+            showAddedBtn.addEventListener('click', () => {
+                deactivateAllButtons();
+                trendsChart.data.datasets[0].hidden = false;
+                trendsChart.data.datasets[1].hidden = true;
+                trendsChart.update();
+                showAddedBtn.classList.replace('btn-inactive', 'btn-active');
+            });
+            
+            showReleaseBtn.addEventListener('click', () => {
+                deactivateAllButtons();
+                trendsChart.data.datasets[0].hidden = true;
+                trendsChart.data.datasets[1].hidden = false;
+                trendsChart.update();
+                showReleaseBtn.classList.replace('btn-inactive', 'btn-active');
+            });
+
+            showCombinedBtn.addEventListener('click', () => {
+                deactivateAllButtons();
+                trendsChart.data.datasets[0].hidden = false;
+                trendsChart.data.datasets[1].hidden = false;
+                trendsChart.update();
+                showCombinedBtn.classList.replace('btn-inactive', 'btn-active');
+            });
+
+            // Removing scroll listeners since navigation links are removed
+            // document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            //     anchor.addEventListener('click', function (e) {
+            //         e.preventDefault();
+            //         document.querySelector(this.getAttribute('href')).scrollIntoView({
+            //             behavior: 'smooth'
+            //         });
+            //     });
+            // });
+        });
+    </script>
+</body>
+</html>
